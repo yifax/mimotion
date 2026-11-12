@@ -28,6 +28,8 @@ jobs:
         env:
             CONFIG: ${{ secrets.CONFIG }}
             AES_KEY: ${{ secrets.AES_KEY }}
+            BARK_URL: ${{ secrets.BARK_URL }}
+            PUSH_PLUS_TOKEN: "NO"
         run: |
           pip3 install -r requirements.txt
           python3 main.py

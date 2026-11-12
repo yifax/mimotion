@@ -1,4 +1,5 @@
 import json
+from urllib.parse import quote
 
 import requests
 from datetime import datetime
@@ -25,13 +26,44 @@ class PushConfig:
                  push_plus_max=30,
                  push_wechat_webhook_key=None,
                  telegram_bot_token=None,
-                 telegram_chat_id=None):
+                 telegram_chat_id=None,
+                 bark_url=None):
         self.push_plus_token = push_plus_token
         self.push_plus_hour = push_plus_hour
         self.push_plus_max = int(push_plus_max) if push_plus_max else 30
         self.push_wechat_webhook_key = push_wechat_webhook_key
         self.telegram_bot_token = telegram_bot_token
         self.telegram_chat_id = telegram_chat_id
+        self.bark_url = bark_url
+
+
+def push_bark(url, title, content):
+    request_url = f"{url.rstrip('/')}/{quote(title, safe='')}/{quote(content, safe='')}"
+    try:
+        response = requests.get(
+            request_url,
+            params={"group": "mimotion", "ttl": 600},
+            timeout=15
+        )
+    except requests.exceptions.RequestException as e:
+        # 请求异常可能包含带设备密钥的 URL，不输出异常详情。
+        print(f"Bark推送网络异常：{type(e).__name__}")
+        return
+
+    if response.status_code != 200:
+        print(f"Bark推送失败：HTTP {response.status_code}")
+        return
+    try:
+        result = response.json()
+    except ValueError:
+        print("Bark推送失败：响应不是有效的JSON")
+        return
+    if not isinstance(result, dict):
+        print("Bark推送失败：响应格式无效")
+    elif result.get('code') != 200:
+        print(f"Bark推送失败：服务返回错误码 {result.get('code')}")
+    else:
+        print("Bark推送成功")
 
 
 def push_plus(token, title, content):
@@ -137,11 +169,20 @@ def push_telegram_bot(bot_token, chat_id, content):
 
 def push_results(exec_results, summary, config: PushConfig):
     """推送所有结果"""
+    push_to_bark(exec_results, config)
     if not_in_push_time_range(config):
         return
     push_to_push_plus(exec_results, summary, config)
     push_to_wechat_webhook(exec_results, summary, config)
     push_to_telegram_bot(exec_results, summary, config)
+
+
+def push_to_bark(exec_results, config: PushConfig):
+    if not config.bark_url or config.bark_url == 'NO':
+        print("未配置 BARK_URL 跳过Bark推送")
+        return
+    content = '\n'.join(result['msg'] for result in exec_results)
+    push_bark(config.bark_url, f"{format_now()} 刷步数通知", content)
 
 
 def not_in_push_time_range(config: PushConfig) -> bool:

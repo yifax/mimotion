@@ -81,6 +81,7 @@
     "PWD": "password",
     "MIN_STEP": "18000",
     "MAX_STEP": "25000",
+    "BARK_URL": "",
     "PUSH_PLUS_TOKEN": "",
     "PUSH_PLUS_HOUR": "",
     "PUSH_PLUS_MAX": "30",
@@ -98,6 +99,7 @@
   | PWD                     | 小米运动登录密码，仅支持小米运动账号对应的密码                                                                                        |
   | MIN_STEP                | 最小步数                                                                                                           |
   | MAX_STEP                | 最大步数，最大步数和最小步数随机范围随着时间线性增加，北京时间22点达到最大值                                                                        |
+  | BARK_URL                | Bark 推送地址，格式为 `https://api.day.app/<设备密钥>`，也支持自建服务器；环境变量非空时优先于 CONFIG                                                |
   | PUSH_PLUS_TOKEN         | 推送加的个人token,申请地址[pushplus](https://www.pushplus.plus/push1.html)，工作流执行完成后推送每个账号的执行状态信息，如没有则不要填写                |
   | PUSH_PLUS_HOUR          | 限制只在某个整点进行pushplus的推送，值为整数，比如设置21，则只在北京时间21点XX分执行时才进行pushplus的消息推送。如不设置或值非数字则每次执行后都会进行推送                       |
   | PUSH_WECHAT_WEBHOOK_KEY | 企业微信推送通知的key，企业微信webhook机器人推送全地址为：https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={机器人的key}，这里配置{机器人的key} |
@@ -106,6 +108,14 @@
   | TELEGRAM_CHAT_ID        | 设置telegram的chatId，需要同时配置TELEGRAM_BOT_TOKEN，否则无法执行推送。关于这两个值如何获取，请前往官网查看。                                        |
   | SLEEP_GAP               | 多账号执行间隔，单位秒，如果账号比较多可以设置的短一点，默认为5秒                                                                              |
   | USE_CONCURRENT          | 是否使用多线程，实验性功能，未测试是否有效。账号多的可以试试，将它设置为True即可，启用后 `SLEEP_GAP` 将不再生效                                               |
+
+#### Bark 推送运行结果
+
+- 在 `Settings → Secrets and variables → Actions → New repository secret` 中添加 `BARK_URL`，值为 Bark 的服务器地址加设备密钥，例如 `https://api.day.app/<设备密钥>`。不要包含 `/title/body` 或查询参数，也不要把真实地址提交到代码。
+- Actions 已将这个 Secret 传入程序，无需修改现有 `CONFIG`；本地运行可在 `.env` 中设置 `BARK_URL`。
+- 每次账号执行结束后推送实际结果，例如 `修改步数（5864）[success]`；多账号结果按行显示，失败结果也会发送。消息不额外包含账号名称。
+- Bark 不受 `PUSH_PLUS_HOUR` 限制，使用 `group=mimotion` 和 `ttl=600`。未配置地址时跳过；推送失败会在日志中明确提示，但不会改变账号执行结果。
+- 此 fork 的 Actions 已通过环境变量 `PUSH_PLUS_TOKEN=NO` 禁用 PushPlus，即使现有 `CONFIG` 中仍有 PushPlus token 也不会发送。该环境变量优先于 `CONFIG`；删除它可恢复原有配置行为。
 
 ### 三、多账户设置(如用不上请忽略)
 
